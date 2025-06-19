@@ -85,7 +85,7 @@ class SherparrClient:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.server_url}/client/status",
-                    json=client_status.model_dump(),
+                    json=client_status.model_dump(mode='json'),
                     timeout=10.0
                 )
                 response.raise_for_status()
@@ -257,7 +257,9 @@ class SherparrClient:
     async def sync_share(self, share_name: str) -> ShareSyncStats:
         """Sync a single share and return statistics"""
         source_path = f"{self.remote_base}/{share_name}/"
-        dest_path = f"{self.dest_base}/{share_name}/"
+        # Remove _remote suffix from destination path
+        dest_share_name = share_name.replace("_remote", "")
+        dest_path = f"{self.dest_base}/{dest_share_name}/"
         
         logger.info(f"Starting sync: {source_path} -> {dest_path}")
         
@@ -297,10 +299,10 @@ class SherparrClient:
                 post_sync_files, post_sync_size = self.get_share_total_stats(dest_path.rstrip('/'))
                 
                 # Create ZFS snapshot after successful sync
-                snapshot_info = self.create_zfs_snapshot(share_name)
+                snapshot_info = self.create_zfs_snapshot(dest_share_name)
                 
                 return ShareSyncStats(
-                    share_name=share_name,
+                    share_name=dest_share_name,  # Use cleaned name
                     files_synced=stats['files_transferred'],
                     bytes_synced=stats['total_size'],
                     total_files=stats['total_files'],
@@ -320,14 +322,14 @@ class SherparrClient:
                 
                 # Don't create snapshot on sync failure
                 snapshot_info = ZFSSnapshotInfo(
-                    dataset_name=f"{self.zfs_pool}/{self.zfs_parent_dataset}/{share_name}",
+                    dataset_name=f"{self.zfs_pool}/{self.zfs_parent_dataset}/{dest_share_name}",
                     snapshot_name="",
                     created=False,
                     error_message="Sync failed - snapshot not created"
                 )
                 
                 return ShareSyncStats(
-                    share_name=share_name,
+                    share_name=dest_share_name,  # Use cleaned name
                     files_synced=0,
                     bytes_synced=0,
                     total_files=0,
@@ -349,14 +351,14 @@ class SherparrClient:
             
             # Don't create snapshot on exception
             snapshot_info = ZFSSnapshotInfo(
-                dataset_name=f"{self.zfs_pool}/{self.zfs_parent_dataset}/{share_name}",
+                dataset_name=f"{self.zfs_pool}/{self.zfs_parent_dataset}/{dest_share_name}",
                 snapshot_name="",
                 created=False,
                 error_message="Sync exception - snapshot not created"
             )
             
             return ShareSyncStats(
-                share_name=share_name,
+                share_name=dest_share_name,  # Use cleaned name
                 files_synced=0,
                 bytes_synced=0,
                 total_files=0,
