@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  sherparr-server:
+    build:
+      context: .
+      dockerfile: sherparr_server/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - TAPO_IP=${TAPO_IP:-192.168.1.100}
+      - TAPO_USERNAME=${TAPO_USERNAME}
+      - TAPO_PASSWORD=${TAPO_PASSWORD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  sherparr-client:
+    build:
+      context: .
+      dockerfile: sherparr_client/Dockerfile
+    environment:
+      - CLIENT_ID=${CLIENT_ID:-unraid-client}
+      - SERVER_URL=http://sherparr-server:8000
+      - REMOTE_BASE=${REMOTE_BASE:-/mnt/remotes}
+      - DEST_BASE=${DEST_BASE:-/mnt/users}
+      - RSYNC_OPTIONS=${RSYNC_OPTIONS:--avz --progress --delete --stats}
+      - SHUTDOWN_DELAY=${SHUTDOWN_DELAY:-1800}
+      - DRY_RUN=${DRY_RUN:-false}
+      - ZFS_POOL=${ZFS_POOL:-tank}
+      - ZFS_PARENT_DATASET=${ZFS_PARENT_DATASET:-users}
+      - CREATE_SNAPSHOTS=${CREATE_SNAPSHOTS:-true}
+    volumes:
+      - ${DEST_MOUNT_PATH}:/mnt/users
+      - ${REMOTE_MOUNT_PATH}:/mnt/remotes
+    depends_on:
+      - sherparr-server
+    restart: "no"  # Run once then stop
+    privileged: true  # Required for shutdown command
