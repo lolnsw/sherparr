@@ -1,10 +1,9 @@
 FROM python:3.13-slim
 
-# Install rsync, zfs-utils and other system dependencies
+# Install rsync and other system dependencies
 RUN apt-get update && apt-get install -y \
     rsync \
     openssh-client \
-    zfsutils-linux \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

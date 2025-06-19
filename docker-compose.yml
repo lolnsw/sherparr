@@ -37,7 +37,9 @@ services:
       - ${DEST_MOUNT_PATH}:/mnt/users
       - ${REMOTE_MOUNT_PATH}:/mnt/remotes
       - ${LOG_MOUNT_PATH:-/mnt/user/logs}:/mnt/user/logs
+      - /usr/sbin/zfs:/usr/sbin/zfs:ro  # Use host ZFS binary
+      - /usr/sbin/zpool:/usr/sbin/zpool:ro  # Use host ZFS binary
     depends_on:
       - sherparr-server
     restart: "no"  # Run once then stop
-    privileged: true  # Required for shutdown command
+    privileged: true  # Required for shutdown and ZFS commands
