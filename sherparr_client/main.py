@@ -60,7 +60,7 @@ class SherparrClient:
         self.server_url = os.getenv("SERVER_URL", "http://sherparr-server:8000")
         self.remote_base = os.getenv("REMOTE_BASE", "/mnt/remotes")
         self.dest_base = os.getenv("DEST_BASE", "/mnt/users")
-        self.rsync_options = os.getenv("RSYNC_OPTIONS", "-avz --progress --delete --stats")
+        self.rsync_options = os.getenv("RSYNC_OPTIONS", "-avz --progress --delete --stats --verbose --itemize-changes")
         self.shutdown_delay = int(os.getenv("SHUTDOWN_DELAY", "1800"))  # 30 minutes
         self.dry_run = os.getenv("DRY_RUN", "true").lower() == "true"
         self.zfs_pool = os.getenv("ZFS_POOL", "tank")
@@ -286,7 +286,54 @@ class SherparrClient:
                 universal_newlines=True
             )
             
-            stdout, stderr = process.communicate()
+            # Stream output in real-time while process runs
+            stdout_lines = []
+            stderr_lines = []
+            
+            while True:
+                # Check if process has finished
+                if process.poll() is not None:
+                    # Get any remaining output
+                    remaining_stdout, remaining_stderr = process.communicate()
+                    if remaining_stdout:
+                        for line in remaining_stdout.splitlines():
+                            logger.info(f"rsync: {line}")
+                            stdout_lines.append(line)
+                    if remaining_stderr:
+                        for line in remaining_stderr.splitlines():
+                            logger.error(f"rsync error: {line}")
+                            stderr_lines.append(line)
+                    break
+                
+                # Read stdout
+                if process.stdout and process.stdout.readable():
+                    try:
+                        line = process.stdout.readline()
+                        if line:
+                            line = line.strip()
+                            if line:
+                                logger.info(f"rsync: {line}")
+                                stdout_lines.append(line)
+                    except:
+                        pass
+                
+                # Read stderr
+                if process.stderr and process.stderr.readable():
+                    try:
+                        line = process.stderr.readline()
+                        if line:
+                            line = line.strip()
+                            if line:
+                                logger.error(f"rsync error: {line}")
+                                stderr_lines.append(line)
+                    except:
+                        pass
+                
+                # Small delay to prevent excessive CPU usage
+                await asyncio.sleep(0.1)
+            
+            stdout = '\n'.join(stdout_lines)
+            stderr = '\n'.join(stderr_lines)
             end_time = datetime.now()
             duration = (end_time - start_time).total_seconds()
             

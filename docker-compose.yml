@@ -27,7 +27,7 @@ services:
       - SERVER_URL=http://sherparr-server:8000
       - REMOTE_BASE=${REMOTE_BASE:-/mnt/remotes}
       - DEST_BASE=${DEST_BASE:-/mnt/users}
-      - RSYNC_OPTIONS=${RSYNC_OPTIONS:--avz --progress --delete --stats}
+      - RSYNC_OPTIONS=${RSYNC_OPTIONS:--avz --progress --delete --stats --verbose --itemize-changes}
       - SHUTDOWN_DELAY=${SHUTDOWN_DELAY:-1800}
       - DRY_RUN=${DRY_RUN:-true}
       - ZFS_POOL=${ZFS_POOL:-tank}
