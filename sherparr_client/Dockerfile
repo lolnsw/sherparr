@@ -21,7 +21,7 @@ COPY sherparr_client/ ./sherparr_client/
 RUN uv sync --frozen
 
 # Create mount points
-RUN mkdir -p /mnt/remotes /mnt/users
+RUN mkdir -p /mnt/remotes /mnt/users /mnt/user/logs
 
 # Run client
 CMD ["uv", "run", "python", "-m", "sherparr_client.main"]

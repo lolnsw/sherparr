@@ -10,11 +10,48 @@ from typing import Optional, List
 from pathlib import Path
 import httpx
 import logging
+from logging.handlers import RotatingFileHandler
 
 from shared.models import ClientStatus, SyncStatus, SyncJobReport, ShareSyncStats, DiskSpaceInfo, ZFSSnapshotInfo
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+def setup_logging():
+    """Setup logging with rotation to /mnt/user/logs/sherparr"""
+    log_dir = Path("/mnt/user/logs/sherparr")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    log_file = log_dir / "sherparr-client.log"
+    
+    # Create rotating file handler (1MB max, keep 10 files)
+    file_handler = RotatingFileHandler(
+        log_file, 
+        maxBytes=1024*1024,  # 1MB
+        backupCount=10
+    )
+    
+    # Create console handler
+    console_handler = logging.StreamHandler()
+    
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Setup root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+    
+    return logging.getLogger(__name__)
+
+
+# Initialize logging
+logger = setup_logging()
 
 
 class SherparrClient:
@@ -417,7 +454,13 @@ class SherparrClient:
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGINT, self.signal_handler)
         
+        logger.info("=" * 60)
         logger.info(f"Sherparr Client starting (ID: {self.client_id})")
+        logger.info(f"Remote base: {self.remote_base}")
+        logger.info(f"Destination base: {self.dest_base}")
+        logger.info(f"Dry run mode: {self.dry_run}")
+        logger.info(f"ZFS snapshots: {self.create_snapshots}")
+        logger.info("=" * 60)
         
         # Initial status
         await self.send_status_update(SyncStatus.IDLE, "Client started")
@@ -427,13 +470,19 @@ class SherparrClient:
         
         if success and self.should_shutdown:
             # Wait for shutdown delay
+            logger.info("=" * 60)
+            logger.info(f"SYNC COMPLETED SUCCESSFULLY")
             logger.info(f"Waiting {self.shutdown_delay} seconds before shutdown...")
+            logger.info("=" * 60)
             await asyncio.sleep(self.shutdown_delay)
             
             if self.should_shutdown:
                 await self.shutdown_unraid()
         else:
-            logger.info("Rsync failed or shutdown cancelled, staying online")
+            logger.warning("=" * 60)
+            logger.warning("SYNC FAILED OR SHUTDOWN CANCELLED")
+            logger.warning("Staying online for manual intervention")
+            logger.warning("=" * 60)
             await self.send_status_update(SyncStatus.IDLE, "Waiting for manual intervention")
             
             # Keep alive
