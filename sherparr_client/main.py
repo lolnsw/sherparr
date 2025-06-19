@@ -25,7 +25,7 @@ class SherparrClient:
         self.dest_base = os.getenv("DEST_BASE", "/mnt/users")
         self.rsync_options = os.getenv("RSYNC_OPTIONS", "-avz --progress --delete --stats")
         self.shutdown_delay = int(os.getenv("SHUTDOWN_DELAY", "1800"))  # 30 minutes
-        self.dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
+        self.dry_run = os.getenv("DRY_RUN", "true").lower() == "true"
         self.zfs_pool = os.getenv("ZFS_POOL", "tank")
         self.zfs_parent_dataset = os.getenv("ZFS_PARENT_DATASET", "users")
         self.create_snapshots = os.getenv("CREATE_SNAPSHOTS", "true").lower() == "true"
@@ -232,7 +232,13 @@ class SherparrClient:
         
         try:
             cmd = f"rsync {self.rsync_options} {source_path} {dest_path}"
-            logger.info(f"Executing: {cmd}")
+            
+            if self.dry_run:
+                # Add --dry-run to rsync command for simulation
+                cmd = f"rsync --dry-run {self.rsync_options} {source_path} {dest_path}"
+                logger.info(f"DRY RUN: Executing: {cmd}")
+            else:
+                logger.info(f"Executing: {cmd}")
             
             process = subprocess.Popen(
                 cmd.split(),

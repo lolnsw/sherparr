@@ -29,7 +29,7 @@ services:
       - DEST_BASE=${DEST_BASE:-/mnt/users}
       - RSYNC_OPTIONS=${RSYNC_OPTIONS:--avz --progress --delete --stats}
       - SHUTDOWN_DELAY=${SHUTDOWN_DELAY:-1800}
-      - DRY_RUN=${DRY_RUN:-false}
+      - DRY_RUN=${DRY_RUN:-true}
       - ZFS_POOL=${ZFS_POOL:-tank}
       - ZFS_PARENT_DATASET=${ZFS_PARENT_DATASET:-users}
       - CREATE_SNAPSHOTS=${CREATE_SNAPSHOTS:-true}
