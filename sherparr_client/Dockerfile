@@ -17,7 +17,7 @@ COPY shared/ ./shared/
 COPY sherparr_client/ ./sherparr_client/
 
 # Install dependencies
-RUN uv sync --frozen
+RUN uv sync
 
 # Create mount points
 RUN mkdir -p /mnt/remotes /mnt/users /mnt/user/logs
